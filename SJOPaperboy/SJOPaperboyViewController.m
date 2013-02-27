@@ -10,9 +10,6 @@
 #import "SJOPaperboyLocationManager.h"
 #import "IPInsetLabel.h"
 
-#define kBackgroundUpdates @"paperboy_background_updates"
-#define kLocations @"paperboy_location_array"
-
 @interface SJOPaperboyViewController ()
 
 @property (nonatomic, strong) IPInsetLabel* headerLabel;
@@ -22,7 +19,6 @@
 
 -(IPInsetLabel*) styledLabelWithText:(NSString*)text;
 -(void) toggleBackgroundUpdates:(id)sender;
--(void) updateGeofencedLocations;
 @end
 
 
@@ -55,12 +51,6 @@
     NSString* footerText = [NSString stringWithFormat:NSLocalizedStringFromTable(@"footer_text", @"Paperboy", nil), appName,deviceName];
     self.headerLabel = [self styledLabelWithText:headerText];
     self.footerLabel = [self styledLabelWithText:footerText];
-}
-
-- (void)viewDidLoad
-{
-    [super viewDidLoad];
-    [self updateGeofencedLocations];
 }
 
 -(void)viewWillAppear:(BOOL)animated
@@ -225,7 +215,7 @@
         [userDefaults synchronize];
         
         [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
-        [self updateGeofencedLocations];
+        [[SJOPaperboyLocationManager sharedInstance] updateGeofencedLocations];
     }
 }
 
@@ -253,7 +243,7 @@
                     [userDefaults setObject:[NSDictionary dictionary] forKey:kLocations];
                     [userDefaults synchronize];
                     [self.tableView reloadSections:[NSIndexSet indexSetWithIndex:2] withRowAnimation:UITableViewRowAnimationAutomatic];
-                    [self updateGeofencedLocations];
+                    [[SJOPaperboyLocationManager sharedInstance] updateGeofencedLocations];
                     break;
                 }
             }
@@ -267,6 +257,7 @@
 }
 
 #pragma mark CLLocationManager delegate
+
 -(void)locationManager:(CLLocationManager *)manager didUpdateLocations:(NSArray *)locations
 {
     
@@ -295,7 +286,7 @@
             [self.tableView reloadSections:[NSIndexSet indexSetWithIndex:2] withRowAnimation:UITableViewRowAnimationAutomatic];
             [self.tableView reloadData];
             
-            [self updateGeofencedLocations];
+            [[SJOPaperboyLocationManager sharedInstance] updateGeofencedLocations];
         }
     }];
 }
@@ -311,39 +302,7 @@
 }
 
 
-
 #pragma mark Private methods
-
--(void) updateGeofencedLocations
-{
-    // Cancel previous update locations before setting new ones
-    NSArray *regionArray = [[[SJOPaperboyLocationManager sharedLocationManager] monitoredRegions] allObjects];
-    for (int i = 0; i < [regionArray count]; i++) {
-        [[SJOPaperboyLocationManager sharedLocationManager] stopMonitoringForRegion:[regionArray objectAtIndex:i]];
-    }
-    
-    if ([SJOPaperboyViewController isBackgroundUpdatingEnabled]) {
-        
-        NSMutableArray *geofences = [NSMutableArray array];
-        NSArray* locations = [SJOPaperboyViewController locationsForUpdate];
-        
-        for(CLLocation *location in locations) {
-            NSString* identifier = [NSString stringWithFormat:@"%f%f", location.coordinate.latitude, location.coordinate.longitude];
-            
-            CLRegion* geofence = [[CLRegion alloc] initCircularRegionWithCenter:location.coordinate
-                                                                         radius:100
-                                                                     identifier:identifier];
-            [geofences addObject:geofence];
-        }
-        
-        if (geofences.count > 0) {
-            for(CLRegion *geofence in geofences) {
-                [[SJOPaperboyLocationManager sharedLocationManager] startMonitoringForRegion:geofence];
-            }
-        }
-        
-    }
-}
 
 -(IPInsetLabel*) styledLabelWithText:(NSString*)text
 {
@@ -377,28 +336,7 @@
         [self.tableView deleteSections:indexes withRowAnimation:UITableViewRowAnimationAutomatic];
     }
     
-    [self updateGeofencedLocations];
-}
-
-#pragma mark Static helpers
-
-+ (BOOL) isBackgroundUpdatingEnabled
-{
-    NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
-    return [userDefaults boolForKey:kBackgroundUpdates];
-}
-
-+ (NSArray*) locationsForUpdate
-{
-    NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
-    NSDictionary *savedLocations = [userDefaults objectForKey:kLocations];
-    
-    NSMutableArray* locations = [NSMutableArray array];
-    for (NSData* data in [savedLocations allValues]) {
-        CLLocation* location = [NSKeyedUnarchiver unarchiveObjectWithData:data];
-        [locations addObject:location];
-    }
-    return [NSArray arrayWithArray:locations];
+    [[SJOPaperboyLocationManager sharedInstance] updateGeofencedLocations];
 }
 
 @end

@@ -14,7 +14,5 @@
 @interface SJOPaperboyViewController : UITableViewController<CLLocationManagerDelegate>
 
 @property (nonatomic, strong) CLLocationManager *locationManager;
-+ (BOOL) isBackgroundUpdatingEnabled;
-+ (NSArray*) locationsForUpdate;
 
 @end

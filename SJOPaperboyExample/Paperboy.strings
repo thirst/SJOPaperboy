@@ -7,7 +7,7 @@
 */
 
 "view_controller_title" = "Background Updates";
-"header_text" = "%@ can automatically deliver updates in the background when you enter or leave certain locations.";
+"header_text" = "%@ can automatically deliver updates in the background when you leave certain locations.";
 "footer_text" = "%@ respects your privacy. The locations you select are stored only on your %@.";
 
 "region_monitoring_not_available_title" = "Background updates not supported";

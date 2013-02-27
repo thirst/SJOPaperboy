@@ -17,6 +17,10 @@
         self.locationManager = [[CLLocationManager alloc] init];
         self.locationManager.delegate = self;
         self.locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters;
+        
+        self.radius = 20;
+        self.updateOnEnter = NO;
+        self.updateOnExit = YES;
     }
     return self;
 }
@@ -39,12 +43,14 @@
 
 -(void)locationManager:(CLLocationManager *)manager didEnterRegion:(CLRegion *)region
 {
-    [self locationChanged];
+    if (self.updateOnEnter)
+        [self locationChanged];
 }
 
 -(void)locationManager:(CLLocationManager *)manager didExitRegion:(CLRegion *)region
 {
-    [self locationChanged];
+    if (self.updateOnExit)
+        [self locationChanged];
 }
 
 -(void)locationChanged
@@ -68,6 +74,58 @@
     if (self.locationChangedBlock) {
         self.locationChangedBlock();
     }
+}
+
+-(void) updateGeofencedLocations
+{
+        // Cancel previous update locations before setting new ones
+    NSArray *regionArray = [[[SJOPaperboyLocationManager sharedLocationManager] monitoredRegions] allObjects];
+    for (int i = 0; i < [regionArray count]; i++) {
+        [[SJOPaperboyLocationManager sharedLocationManager] stopMonitoringForRegion:[regionArray objectAtIndex:i]];
+    }
+    
+    if ([SJOPaperboyLocationManager isBackgroundUpdatingEnabled]) {
+        
+        NSMutableArray *geofences = [NSMutableArray array];
+        NSArray* locations = [SJOPaperboyLocationManager locationsForUpdate];
+        
+        for(CLLocation *location in locations) {
+            NSString* identifier = [NSString stringWithFormat:@"%f%f", location.coordinate.latitude, location.coordinate.longitude];
+            
+            CLRegion* geofence = [[CLRegion alloc] initCircularRegionWithCenter:location.coordinate
+                                                                         radius:self.radius
+                                                                     identifier:identifier];
+            [geofences addObject:geofence];
+        }
+        
+        if (geofences.count > 0) {
+            for(CLRegion *geofence in geofences) {
+                [[SJOPaperboyLocationManager sharedLocationManager] startMonitoringForRegion:geofence];
+            }
+        }
+        
+    }
+}
+
+#pragma mark Static helpers
+
++ (BOOL) isBackgroundUpdatingEnabled
+{
+    NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
+    return [userDefaults boolForKey:kBackgroundUpdates];
+}
+
++ (NSArray*) locationsForUpdate
+{
+    NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
+    NSDictionary *savedLocations = [userDefaults objectForKey:kLocations];
+    
+    NSMutableArray* locations = [NSMutableArray array];
+    for (NSData* data in [savedLocations allValues]) {
+        CLLocation* location = [NSKeyedUnarchiver unarchiveObjectWithData:data];
+        [locations addObject:location];
+    }
+    return [NSArray arrayWithArray:locations];
 }
 
 @end
